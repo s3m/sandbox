@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 )
 
 func main() {
@@ -12,12 +13,13 @@ func main() {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		scanner := bufio.NewScanner(os.Stdin)
 		scanner.Split(bufio.ScanBytes)
-		chunk := make([]byte, 0, 4)
+		chunk := make([]byte, 0, 1024)
 		for scanner.Scan() {
 			chunk = append(chunk, scanner.Bytes()...)
-			if len(chunk) == 4 {
+			if len(chunk) == 1024 {
 				fmt.Printf("chunk: %s\n", chunk)
 				chunk = chunk[:0]
+				time.Sleep(time.Second)
 			}
 		}
 		if err := scanner.Err(); err != nil {
