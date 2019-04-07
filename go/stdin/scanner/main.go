@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -25,11 +26,11 @@ func main() {
 	scanner.Buffer(buf, 10<<20)
 	scanner.Split(Chunks)
 	for scanner.Scan() {
-		nBytes += int64(len(scanner.Bytes()))
+		chunk := scanner.Bytes()
+		nBytes += int64(len(chunk))
 		nChunks++
-		if nBytes >= 1073741824 {
-			break
-		}
+		time.Sleep(time.Second)
+		fmt.Printf("chunk = %s\n", chunk)
 	}
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
