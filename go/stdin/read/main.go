@@ -5,9 +5,11 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 )
 
 func main() {
+	start := time.Now()
 	nBytes, nChunks := int64(0), int64(0)
 	r := bufio.NewReader(os.Stdin)
 	buf := make([]byte, 0, 1024)
@@ -30,5 +32,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	log.Println("Bytes:", nBytes, "Chunks:", nChunks)
+	elapsed := time.Since(start)
+	log.Printf("Bytes: %d Chunks: %d: epapsed: %v\n", nBytes, nChunks, elapsed)
 }

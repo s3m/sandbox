@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"time"
 )
 
 func Chunks(data []byte, atEOF bool) (advance int, token []byte, err error) {
@@ -17,9 +18,10 @@ func Chunks(data []byte, atEOF bool) (advance int, token []byte, err error) {
 }
 
 func main() {
+	start := time.Now()
 	nBytes, nChunks := int64(0), int64(0)
 	scanner := bufio.NewScanner(os.Stdin)
-	buf := make([]byte, 0, 1024)
+	buf := make([]byte, 0, 1<<20)
 	scanner.Buffer(buf, 10<<20)
 	scanner.Split(Chunks)
 	for scanner.Scan() {
@@ -29,5 +31,6 @@ func main() {
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Bytes:", nBytes, "Chunks:", nChunks)
+	elapsed := time.Since(start)
+	log.Printf("Bytes: %d Chunks: %d: epapsed: %v\n", nBytes, nChunks, elapsed)
 }
