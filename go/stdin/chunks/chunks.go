@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"testing"
 )
 
 func Chunks(data []byte, atEOF bool) (advance int, token []byte, err error) {
@@ -18,9 +17,7 @@ func Chunks(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return len(data), data[:], nil
 }
 
-func Scanner(f *os.File, b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
+func Scanner(f *os.File) {
 	nBytes, nChunks := int64(0), int64(0)
 	scanner := bufio.NewScanner(f)
 	buf := make([]byte, 0, 1<<20)
@@ -29,15 +26,16 @@ func Scanner(f *os.File, b *testing.B) {
 	for scanner.Scan() {
 		nBytes += int64(len(scanner.Bytes()))
 		nChunks++
+		if nBytes >= 1073741824 {
+			return
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func Reader(f *os.File, b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
+func Reader(f *os.File) {
 	nBytes, nChunks := int64(0), int64(0)
 	r := bufio.NewReader(f)
 	buf := make([]byte, 0, 1024)
@@ -55,9 +53,11 @@ func Reader(f *os.File, b *testing.B) {
 		}
 		nChunks++
 		nBytes += int64(len(buf))
-		// process buf
 		if err != nil && err != io.EOF {
 			log.Fatal(err)
+		}
+		if nBytes >= 1073741824 {
+			return
 		}
 	}
 }
