@@ -27,6 +27,9 @@ func main() {
 	for scanner.Scan() {
 		nBytes += int64(len(scanner.Bytes()))
 		nChunks++
+		if nBytes >= 1073741824 {
+			break
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)

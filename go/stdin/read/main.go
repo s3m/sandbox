@@ -31,6 +31,9 @@ func main() {
 		if err != nil && err != io.EOF {
 			log.Fatal(err)
 		}
+		if nBytes >= 1073741824 {
+			break
+		}
 	}
 	elapsed := time.Since(start)
 	log.Printf("Bytes: %d Chunks: %d: epapsed: %v\n", nBytes, nChunks, elapsed)
