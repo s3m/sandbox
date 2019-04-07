@@ -23,7 +23,7 @@ func main() {
 	nBytes, nChunks := int64(0), int64(0)
 	scanner := bufio.NewScanner(os.Stdin)
 	buf := make([]byte, 0, 1<<20)
-	scanner.Buffer(buf, 10<<20)
+	scanner.Buffer(buf, 1<<20)
 	scanner.Split(Chunks)
 	for scanner.Scan() {
 		chunk := scanner.Bytes()
