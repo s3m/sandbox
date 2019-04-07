@@ -18,7 +18,7 @@ func main() {
 			chunk = append(chunk, scanner.Bytes()...)
 			if len(chunk) == 1024 {
 				fmt.Printf("chunk: %s\n", chunk)
-				chunk = chunk[:0]
+				chunk = nil
 				time.Sleep(time.Second)
 			}
 		}
