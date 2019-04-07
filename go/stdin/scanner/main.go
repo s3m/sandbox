@@ -2,34 +2,29 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"os"
 )
 
-func ScanBytes(data []byte, atEOF bool) (advance int, token []byte, err error) {
+func Chunks(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
 	}
-	if len(data) >= 4 {
-		return 4, data[0:4], nil
+	if len(data) >= 1024 {
+		return 1024, data[0:1024], nil
 	}
-	return 0, data[0:], nil
+	return len(data), data[:], nil
 }
 
 func main() {
 	nBytes, nChunks := int64(0), int64(0)
 	scanner := bufio.NewScanner(os.Stdin)
-	//buf := make([]byte, 0, 1024)
-	//scanner.Buffer(buf, 10<<20)
-	//	chunk := make([]byte, 0, 1024)
-	scanner.Split(ScanBytes)
+	buf := make([]byte, 0, 1024)
+	scanner.Buffer(buf, 10<<20)
+	scanner.Split(Chunks)
 	for scanner.Scan() {
-		fmt.Printf("scanner.Bytes() = %s\n", scanner.Bytes())
-		//buf = append(buf, scanner.Bytes()...)
+		nBytes += int64(len(scanner.Bytes()))
 		nChunks++
-		//		nBytes += int64(len(buf))
-		//buf = nil
 	}
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
