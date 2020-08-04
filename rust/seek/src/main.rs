@@ -33,10 +33,6 @@ fn main() {
         }
         let mut f = File::create(&format!("/tmp/chunk_{}", i)).unwrap();
         f.write_all(&chunk).expect("Unable to write data");
-
-        if n < chunk_size {
-            break;
-        }
         i += 1;
     }
 }
