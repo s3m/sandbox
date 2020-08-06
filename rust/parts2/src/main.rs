@@ -1,39 +1,26 @@
+use reqwest::{Body, Client};
 use std::env;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::{BufReader, Write};
+use std::io::SeekFrom;
 use std::process;
+use tokio::fs::File;
+use tokio::io::AsyncReadExt;
+use tokio_util::codec::{BytesCodec, FramedRead};
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         eprintln!("missing arguments: file");
         process::exit(1);
     }
     let file_path = &args[1];
-    let file = File::open(&file_path).unwrap();
-
-    let mut count = 1;
-    loop {
-        let mut reader = BufReader::new(&file);
-        if reader.fill_buf().unwrap().is_empty() {
-            break;
-        }
-        let mut reader = reader.take(10_485_760);
-        let mut f = File::create(&format!("/tmp/chunk_{}", count)).unwrap();
-        loop {
-            let consummed = {
-                let buffer = reader.fill_buf().unwrap();
-                if buffer.is_empty() {
-                    break;
-                }
-                // do something here with buffer
-                // client.put(url).headers(headers).body(Body::from(&buffer))
-                f.write_all(&buffer).expect("Unable to write data");
-                buffer.len()
-            };
-            reader.consume(consummed);
-        }
-        count += 1;
-    }
+    let mut file = File::open(&file_path).await.unwrap();
+    file.seek(SeekFrom::Start(10)).await.unwrap();
+    let file = file.take(10);
+    let stream = FramedRead::new(file, BytesCodec::new());
+    let client = Client::new();
+    let body = Body::wrap_stream(stream);
+    let request = client.put("https://httpbin.org/put").body(body);
+    let rs = request.send().await.unwrap();
+    println!("---\n{:#?}\n---", rs.text().await.unwrap());
 }
