@@ -12,9 +12,10 @@ fn main() {
         process::exit(1);
     }
     let file_path = &args[1];
-    let slices = &args[2].parse::<u64>().unwrap();
+    //    let slices = &args[2].parse::<u64>().unwrap();
     let fsize = metadata(file_path).map(|m| m.len()).unwrap();
-    let chunk_size = (fsize / slices) as usize;
+    //let chunk_size = (fsize / slices) as usize;
+    let chunk_size = 10_485_760;
     println!("file size: {}, chunk size: {}", fsize, chunk_size);
     let file = File::open(&file_path).unwrap();
     let mut i = 1;
@@ -36,7 +37,7 @@ fn main() {
 pub fn read_chunk(file: &File, chunk: usize, i: u64) -> Result<usize, Box<dyn Error>> {
     let mut reader = BufReader::new(file);
     let mut length: usize = 0;
-    let mut f = File::create(&format!("/tmp/chunk_{}", i)).unwrap();
+    let mut f = File::create(&format!("/tmp/chunks/chunk0_{}", i)).unwrap();
     loop {
         let consummed = {
             let buffer = reader.fill_buf()?;
