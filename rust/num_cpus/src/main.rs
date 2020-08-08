@@ -46,7 +46,11 @@ async fn main() {
 
     let now = Instant::now();
     // cpu cores * 2
-    let workers = num_cpus::get() * 2;
+    let workers = if num_cpus::get() * 2 > 4 {
+        3
+    } else {
+        num_cpus::get()
+    };
     println!("Number of workers: {}", workers);
 
     let tasks = FuturesUnordered::new();
