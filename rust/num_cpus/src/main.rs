@@ -1,10 +1,15 @@
 use futures::stream::TryStreamExt;
+use futures::stream::{futures_unordered::FuturesUnordered, StreamExt};
+use num_cpus;
 use std::fs::metadata;
 use std::io::SeekFrom;
+use std::sync::Arc;
 use std::time::Instant;
 use std::{env, error, process};
 use tokio::fs::File;
 use tokio::prelude::*;
+use tokio::sync::Semaphore;
+use tokio::task;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
 #[tokio::main]
@@ -40,28 +45,40 @@ async fn main() {
     }
 
     let now = Instant::now();
-    let mut file = File::open(&file_path).await.unwrap();
+    // cpu cores * 2
+    let workers = num_cpus::get() * 2;
+    println!("Number of workers: {}", workers);
 
+    let tasks = FuturesUnordered::new();
+    let sem = Arc::new(Semaphore::new(workers));
     for part in 0..parts.len() {
-        println!(
-            "part: {}, seek: {}, chunk: {}",
-            part, parts[part][0], parts[part][1]
-        );
-        match read_file(&mut file, parts[part][0], parts[part][1], part).await {
-            Ok(_) => (), //println!("---\n{:#?}\n---", rs),
-            Err(e) => eprintln!("{}", e),
-        };
+        let file = file_path.clone();
+        let p = parts.clone();
+        let permit = Arc::clone(&sem).acquire_owned().await;
+        tasks.push(task::spawn(async move {
+            let _permit = permit;
+            println!(
+                "part: {}, seek: {}, chunk: {}",
+                part, p[part][0], p[part][1]
+            );
+            match read_file(&file, p[part][0], p[part][1], part).await {
+                Ok(_) => (), //println!("---\n{:#?}\n---", rs),
+                Err(e) => eprintln!("{}", e),
+            };
+        }));
     }
+    tasks.for_each(|_| async { () }).await;
     let elapsed = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed);
 }
 
 async fn read_file(
-    file: &mut File,
+    path: &str,
     seek: u64,
     chunk: u64,
     part: usize,
 ) -> Result<(), Box<dyn error::Error>> {
+    let mut file = File::open(&path).await?;
     file.seek(SeekFrom::Start(seek)).await?;
     let file = file.take(chunk);
     let mut stream = FramedRead::new(file, BytesCodec::new());
