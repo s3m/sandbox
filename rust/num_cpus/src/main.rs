@@ -1,5 +1,4 @@
-use futures::stream::TryStreamExt;
-use futures::stream::{futures_unordered::FuturesUnordered, StreamExt};
+use futures::stream::futures_unordered::FuturesUnordered;
 use num_cpus;
 use std::fs::metadata;
 use std::io::SeekFrom;
@@ -8,6 +7,7 @@ use std::time::Instant;
 use std::{env, error, process};
 use tokio::fs::File;
 use tokio::prelude::*;
+use tokio::stream::StreamExt;
 use tokio::sync::Semaphore;
 use tokio::task;
 use tokio_util::codec::{BytesCodec, FramedRead};
@@ -53,7 +53,7 @@ async fn main() {
     };
     println!("Number of workers: {}", workers);
 
-    let tasks = FuturesUnordered::new();
+    let mut tasks = FuturesUnordered::new();
     let sem = Arc::new(Semaphore::new(workers));
     for part in 0..parts.len() {
         let file = file_path.clone();
@@ -71,7 +71,9 @@ async fn main() {
             };
         }));
     }
-    tasks.for_each(|_| async { () }).await;
+    while let Some(item) = tasks.next().await {
+        let () = item.unwrap();
+    }
     let elapsed = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed);
 }
