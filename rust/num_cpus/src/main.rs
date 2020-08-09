@@ -1,14 +1,12 @@
-use futures::stream::futures_unordered::FuturesUnordered;
+use futures::stream::FuturesUnordered;
 use num_cpus;
 use std::fs::metadata;
 use std::io::SeekFrom;
-use std::sync::Arc;
 use std::time::Instant;
 use std::{env, error, process};
 use tokio::fs::File;
 use tokio::prelude::*;
 use tokio::stream::StreamExt;
-use tokio::sync::Semaphore;
 use tokio::task;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
@@ -54,13 +52,10 @@ async fn main() {
     println!("Number of workers: {}", workers);
 
     let mut tasks = FuturesUnordered::new();
-    let sem = Arc::new(Semaphore::new(workers));
     for part in 0..parts.len() {
         let file = file_path.clone();
         let p = parts.clone();
-        let permit = Arc::clone(&sem).acquire_owned().await;
         tasks.push(task::spawn(async move {
-            let _permit = permit;
             println!(
                 "part: {}, seek: {}, chunk: {}",
                 part, p[part][0], p[part][1]
@@ -70,10 +65,15 @@ async fn main() {
                 Err(e) => eprintln!("{}", e),
             };
         }));
+        if tasks.len() == workers {
+            tasks.next().await;
+        }
     }
-    while let Some(item) = tasks.next().await {
-        let () = item.unwrap();
-    }
+    // This loop is how to wait for all the elements in a `FuturesUnordered<T>`
+    // to complete. `_item` is just the unit tuple, `()`, because we did not
+    // return anything
+    while let Some(_item) = tasks.next().await {}
+
     let elapsed = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed);
 }
