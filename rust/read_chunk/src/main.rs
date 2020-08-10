@@ -12,13 +12,21 @@ fn main() {
         process::exit(1);
     }
     let file_path = &args[1];
-    let mut file = File::open(&file_path).unwrap();
-    file.seek(SeekFrom::Start(79279290)).unwrap();
-    let file = file.take(28);
 
-    let i = 0;
-    let mut reader = BufReader::new(file);
-    let mut f = File::create(&format!("/tmp/chunks/chunk0_{}", i)).unwrap();
+    if args.len() >= 3 {
+        let mut file = File::open(&file_path).unwrap();
+        file.seek(SeekFrom::Start(79279290)).unwrap();
+        let handler = file.take(28);
+        my_reader(handler);
+    } else {
+        let file = File::open(&file_path).unwrap();
+        my_reader(file);
+    }
+}
+
+fn my_reader<R: Read>(input: R) {
+    let mut reader = BufReader::new(input);
+    let mut f = File::create(&format!("/tmp/chunks/chunk0_{}", 1)).unwrap();
     loop {
         let consummed = {
             let buffer = reader.fill_buf().unwrap();
