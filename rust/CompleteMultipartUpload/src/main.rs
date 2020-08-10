@@ -1,7 +1,7 @@
 use serde::ser::{Serialize, SerializeMap, SerializeStruct, Serializer};
 use serde_xml_rs::to_string;
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub struct Part {
     pub e_tag: String,
     pub part_number: isize,
@@ -19,9 +19,11 @@ impl Serialize for Part {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Parts {
+    key: String,
     parts: Vec<Part>,
+    upload_id: u16,
 }
 
 impl Serialize for Parts {
@@ -47,7 +49,10 @@ fn main() {
         };
         buffer.push(part);
     }
-    let parts = Parts { parts: buffer };
+    let parts = Parts {
+        parts: buffer,
+        ..Default::default()
+    };
     let x = to_string(&parts).unwrap();
     println!("{}", x); // | xmllint --format -
 }
