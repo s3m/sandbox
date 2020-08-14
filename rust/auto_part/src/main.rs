@@ -2,7 +2,9 @@ use bytesize::ByteSize;
 const MAX_PARTS: u64 = 10000;
 
 fn main() {
-    let fsize: u64 = 322_122_547_200;
+    // let fsize: u64 = 322_122_547_200;
+    // let fsize: u64 = 322_122_547;
+    let fsize: u64 = 5_497_558_138_880;
     let mut chunk_size = 10_485_760;
 
     let mut parts = fsize / chunk_size;
