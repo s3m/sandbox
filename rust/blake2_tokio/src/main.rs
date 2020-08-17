@@ -23,6 +23,12 @@ async fn main() {
     println!("Elapsed: {:.2?}", elapsed);
 
     let now = Instant::now();
+    let checksum = blake3("/tmp/wine.json").await.unwrap();
+    println!("blake3: {}", checksum);
+    let elapsed = now.elapsed();
+    println!("Elapsed: {:.2?}", elapsed);
+
+    let now = Instant::now();
     let checksum = sha256_digest("/tmp/wine.json").await.unwrap();
     println!("sha256: {}", checksum);
     let elapsed = now.elapsed();
@@ -39,6 +45,16 @@ async fn blake(file_path: &str) -> Result<String, Box<dyn Error>> {
     let file = File::open(file_path).await?;
     let mut stream = FramedRead::new(file, BytesCodec::new());
     let mut hasher = blake2s_simd::State::new();
+    while let Some(bytes) = stream.try_next().await? {
+        hasher.update(&bytes);
+    }
+    Ok(hasher.finalize().to_hex().to_string())
+}
+
+async fn blake3(file_path: &str) -> Result<String, Box<dyn Error>> {
+    let file = File::open(file_path).await?;
+    let mut stream = FramedRead::new(file, BytesCodec::new());
+    let mut hasher = blake3::Hasher::new();
     while let Some(bytes) = stream.try_next().await? {
         hasher.update(&bytes);
     }

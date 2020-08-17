@@ -12,6 +12,17 @@ fn main() {
         ("Fade in:  ", "█▓▒░  ", "blue"),
         ("Blocky:   ", "█▛▌▖  ", "magenta"),
     ];
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(200);
+    pb.set_style(
+        ProgressStyle::default_spinner()
+            .tick_chars("/|\\- ")
+            .template("{spinner:.dim.bold} checksum: {wide_msg}"),
+    );
+
+    thread::sleep(Duration::new(5, 0));
+    pb.set_message("44427359e8f382550a6165ab701781c2ea9418f5d10b3d847af3072e097add29");
+    pb.finish();
 
     let m = MultiProgress::new();
 

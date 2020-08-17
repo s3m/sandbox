@@ -40,10 +40,26 @@ name = "blake2tokio"
 version = "0.1.0"
 dependencies = [
  "blake2s_simd",
+ "blake3",
  "futures",
  "ring",
  "tokio",
  "tokio-util",
+]
+
+[[package]]
+name = "blake3"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce4f9586c9a3151c4b49b19e82ba163dd073614dd057e53c969e1a4db5b52720"
+dependencies = [
+ "arrayref",
+ "arrayvec",
+ "cc",
+ "cfg-if",
+ "constant_time_eq",
+ "crypto-mac",
+ "digest",
 ]
 
 [[package]]
@@ -75,6 +91,25 @@ name = "constant_time_eq"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
+
+[[package]]
+name = "crypto-mac"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b584a330336237c1eecd3e94266efb216c56ed91225d634cb2991c5f3fd1aeab"
+dependencies = [
+ "generic-array",
+ "subtle",
+]
+
+[[package]]
+name = "digest"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3dd60d1080a57a05ab032377049e0591415d2b31afd7028356dbf3cc6dcb066"
+dependencies = [
+ "generic-array",
+]
 
 [[package]]
 name = "fnv"
@@ -191,6 +226,16 @@ dependencies = [
  "proc-macro-hack",
  "proc-macro-nested",
  "slab",
+]
+
+[[package]]
+name = "generic-array"
+version = "0.14.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "501466ecc8a30d1d3b7fc9229b122b2ce8ed6e9d9223f1138d4babb253e51817"
+dependencies = [
+ "typenum",
+ "version_check",
 ]
 
 [[package]]
@@ -466,6 +511,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
+name = "subtle"
+version = "2.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "502d53007c02d7605a05df1c1a73ee436952781653da5d0bf57ad608f66932c1"
+
+[[package]]
 name = "syn"
 version = "1.0.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -526,6 +577,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "typenum"
+version = "1.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
+
+[[package]]
 name = "unicode-xid"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -536,6 +593,12 @@ name = "untrusted"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
+
+[[package]]
+name = "version_check"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 
 [[package]]
 name = "wasm-bindgen"
