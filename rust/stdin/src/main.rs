@@ -5,7 +5,7 @@ use tokio::io;
 use tokio::stream::StreamExt;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
-use core::convert::Infallible;
+use std::convert::Infallible;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -33,6 +33,11 @@ async fn main() -> Result<()> {
 
     let client = Client::new();
     let body = Body::wrap_stream(stream);
+    let request = client
+        .put("https://enhm2pljm5s003y.m.pipedream.net")
+        .body(body);
+    let rs = request.send().await?;
+    println!("{:#?}", rs);
 
     Ok(())
 }
