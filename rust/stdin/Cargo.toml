@@ -13,3 +13,4 @@ bytes = "0.5.6"
 reqwest = { version = "0.10", features = ["stream"] }
 tokio = { version = "0.2", features = ["full"] }
 tokio-util = {version = "0.3", features = ["codec"] }
+futures = "*"

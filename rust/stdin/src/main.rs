@@ -1,32 +1,49 @@
-use anyhow::Result;
-use bytes::{BufMut, Bytes, BytesMut};
-//use reqwest::{Body, Client};
+// use anyhow::Result;
+use bytes::{BufMut, BytesMut};
+use reqwest::{Body, Client};
 use tokio::io;
-use tokio::stream::{Stream, StreamExt};
+use tokio::stream::StreamExt;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
+use core::convert::Infallible;
+
+/*
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-pub struct ByteStream<R: io::AsyncRead>(pub R);
+#[derive(Debug)]
+struct ByteStream {
+    buffer: BytesMut,
+}
 
-impl<R: io::AsyncRead> Stream for ByteStream<R> {
-    type Item = Bytes;
-
-    fn poll_next(self: Pin<&'_ mut Self>, ctx: &'_ mut Context) -> Poll<Option<Self::Item>> {
-        let mut buf = BytesMut::with_capacity(8192);
-        this.0
-            .poll_read_buf(ctx, &mut buf) // calls `buf.advance_mut(n)()`
-            .map(|it| match it {
-                Ok(n) if n != 0 => Some(buf.freeze()),
-                _ => None,
-            })
+impl ByteStream {
+    pub fn new(buffer: BytesMut) -> Self {
+        Self { buffer }
     }
 }
 
+impl Stream for ByteStream {
+    type Item = Bytes;
+
+    fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        if self.buffer.is_empty() {
+            Poll::Ready(None)
+        } else {
+            let buf_len = self.buffer.len();
+            let out = if buf_len > 8192 {
+                self.buffer.split_to(8192)
+            } else {
+                self.buffer.split_to(buf_len)
+            };
+            Poll::Ready(Some(Ok::<_, Infallible>(out.freeze())))
+        }
+    }
+}
+*/
+
 // https://users.rust-lang.org/t/how-to-use-bytes-bytesmut-correctly/35817/3
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut buffer = BytesMut::with_capacity(1024 * 1024 * 5);
     let stdin = FramedRead::new(io::stdin(), BytesCodec::new());
     let mut stdin = stdin.map(|i| i.map(|bytes| bytes.freeze()));
@@ -35,8 +52,11 @@ async fn main() -> Result<()> {
     }
     println!("buffer: {}", buffer.len());
 
-    //let client = Client::new();
-    //let body = Body::wrap_stream(x);
+    let stream = futures::stream::once(async { Ok::<_, Infallible>(buffer) });
+
+    //println!("buffer len: {}", buffer.len());
+    let client = Client::new();
+    let body = Body::wrap_stream(stream);
 
     Ok(())
 }
