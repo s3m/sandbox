@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
     }
     pb.finish();
 
-    println!("Elapsed: {:?}", now.elapsed());
+    println!("Elapsed: {:?}, bytes: {}", now.elapsed(), count);
     Ok(())
 }
 
