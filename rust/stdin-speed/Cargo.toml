@@ -9,10 +9,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.32"
 bytes = "0.5.6"
-reqwest = { version = "0.10", features = ["stream"] }
 tokio = { version = "0.2", features = ["full"] }
 tokio-util = {version = "0.3", features = ["codec"] }
-futures = "*"
-async-stream = "0.3.0"
 indicatif = "0.15"
 bytesize = "1.0.1"
