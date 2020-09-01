@@ -1,0 +1,13 @@
+[package]
+name = "read_speed_test"
+version = "0.1.0"
+authors = ["nbari <nbari@tequila.io>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "0.2", features = ["full"] }
+futures = "0.3.5"
+tokio-util = {version = "0.3.1", features = ["codec"] }
+anyhow = "1.0.32"
