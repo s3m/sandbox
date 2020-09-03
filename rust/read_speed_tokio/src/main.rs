@@ -9,7 +9,6 @@ use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::stream::StreamExt;
 use tokio::sync::Semaphore;
-use tokio::task;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
 #[tokio::main]
@@ -30,29 +29,25 @@ async fn main() -> Result<()> {
         fsize / chunk_size
     );
     let mut seek: u64 = 0;
-    let mut parts: Vec<Vec<u64>> = Vec::new();
+    let mut parts: Vec<(u64, u64)> = Vec::new();
     while seek < fsize {
         if (fsize - seek) <= chunk_size {
             chunk_size = fsize % chunk_size;
         }
         println!("seek: {}, chunk: {}", seek, chunk_size,);
-        parts.push(vec![seek, chunk_size]);
+        parts.push((seek, chunk_size));
         seek += chunk_size;
     }
 
     let mut tasks = Vec::new();
     let sem = Arc::new(Semaphore::new(4));
-    for part in 0..parts.len() {
+    for (pos, part) in parts.iter().enumerate() {
         let file = file_path.clone();
-        let p = parts.clone();
+        let part = part.clone();
         let permit = Arc::clone(&sem).acquire_owned().await;
-        tasks.push(task::spawn(async move {
+        tasks.push(tokio::spawn(async move {
             let _permit = permit;
-            println!(
-                "read part: {}, seek: {}, chunk: {}",
-                part, p[part][0], p[part][1]
-            );
-            match read_file(&file, p[part][0], p[part][1], part).await {
+            match read_file(&file, part.0, part.1, pos).await {
                 Ok(rs) => println!("{}", rs),
                 Err(e) => eprintln!("{}", e),
             };

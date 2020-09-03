@@ -7,7 +7,6 @@ use std::{env, process::exit};
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::stream::StreamExt;
-use tokio::task;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
 #[tokio::main]
@@ -19,7 +18,7 @@ async fn main() -> Result<()> {
         exit(1);
     }
     let file_path = &args[1];
-    let fsize = metadata(file_path).map(|m| m.len()).unwrap();
+    let fsize = metadata(&file_path).map(|m| m.len()).unwrap();
     let mut chunk_size = 10_485_760;
     println!(
         "file size: {}, chunk size: {}, parts: {}",
@@ -28,37 +27,31 @@ async fn main() -> Result<()> {
         fsize / chunk_size
     );
     let mut seek: u64 = 0;
-    let mut parts: Vec<Vec<u64>> = Vec::new();
+    let mut parts: Vec<(u64, u64)> = Vec::new();
     while seek < fsize {
         if (fsize - seek) <= chunk_size {
             chunk_size = fsize % chunk_size;
         }
         println!("seek: {}, chunk: {}", seek, chunk_size,);
-        parts.push(vec![seek, chunk_size]);
+        parts.push((seek, chunk_size));
         seek += chunk_size;
     }
 
     let mut tasks = FuturesUnordered::new();
-    for part in 0..parts.len() {
-        let file = file_path.clone();
-        let p = parts.clone();
-        tasks.push(async move {
-            println!(
-                "read part: {}, seek: {}, chunk: {}",
-                part, p[part][0], p[part][1]
-            );
-            match read_file(&file, p[part][0], p[part][1], part).await {
-                Ok(rs) => println!("{}", rs),
-                Err(e) => eprintln!("{}", e),
-            };
-        });
+    for (pos, part) in parts.iter().enumerate() {
+        tasks.push(read_file(&file_path, part.0, part.1, pos));
 
+        // limit to only 4 tasks concurrent
         if tasks.len() == 4 {
-            if let Some(t) = tasks.next().await {}
+            if let Some(t) = tasks.next().await {
+                println!("{:#?}", t.unwrap());
+            }
         }
     }
 
-    while let Some(t) = tasks.next().await {}
+    while let Some(t) = tasks.next().await {
+        println!("{:#?}", t.unwrap());
+    }
     println!("Elapsed: {:?}", now.elapsed());
     Ok(())
 }
@@ -71,6 +64,8 @@ async fn read_file(path: &str, seek: u64, chunk: u64, part: usize) -> Result<Str
     let mut count = 0;
     while let Some(bytes) = stream.try_next().await? {
         count += bytes.len();
+        // do something here, upload/stream the file PUT/POST
+        // no CPU intensive so maybe spawn will not help much
     }
     Ok(format!("part: {}, size: {}", part, count.to_string()))
 }
