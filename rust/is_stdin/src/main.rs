@@ -1,12 +1,8 @@
-use std::io::{self, BufRead};
-
 fn main() {
     if is_readable_stdin() {
-        println!("stdin readable");
-        let stdin = io::stdin();
-        for line in stdin.lock().lines() {
-            println!("{}", line.unwrap());
-        }
+        let mut line = String::new();
+        std::io::stdin().read_line(&mut line).unwrap();
+        println!("len: {}", line.len());
     } else {
         println!("no stdin")
     }
