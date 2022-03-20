@@ -12,6 +12,8 @@ use tokio_util::codec::{BytesCodec, FramedRead};
 
 #[tokio::main]
 async fn main() {
+    dbg!(num_cpus::get_physical());
+    dbg!(num_cpus::get());
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         eprintln!("missing arguments: file");
