@@ -10,7 +10,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Clone the Rust project
-RUN git clone --branch sandbox https://github.com/s3m/s3m.git .
+RUN git clone --branch 0.7.4 https://github.com/s3m/s3m.git .
+# RUN git clone --branch sandbox https://github.com/s3m/s3m.git .
 
 RUN cargo build --release --locked
 
