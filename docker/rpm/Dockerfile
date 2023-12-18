@@ -10,16 +10,16 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Clone the Rust project
-RUN git clone --branch 0.8.1 https://github.com/s3m/s3m.git .
+RUN git clone --branch 0.8.3 https://github.com/s3m/s3m.git .
 # RUN git clone --branch sandbox https://github.com/s3m/s3m.git .
 
-RUN cargo build --release --locked
+RUN cargo build --release --locked --features "openssl/vendored"
 
 From rust:latest
 
 WORKDIR /app
 
-RUN git clone --branch 0.8.1 https://github.com/s3m/s3m.git .
+RUN git clone --branch 0.8.3 https://github.com/s3m/s3m.git .
 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/s3m /app/target/release/s3m
 
