@@ -1,0 +1,11 @@
+[package]
+name = "decrypt"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.98"
+chacha20poly1305 = { version = "0.10.1", features = ["stream"] }
+clap = { version = "4.5.38", features = ["derive"] }
+rand = "0.9.1"
+secrecy = "0.10.3"
