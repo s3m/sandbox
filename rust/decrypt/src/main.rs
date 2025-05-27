@@ -37,6 +37,7 @@ pub fn decrypt_file(
             encrypted_file_path.display()
         )
     })?;
+
     // Create the output file for writing the decrypted content.
     let mut decrypted_file = File::create(decrypted_file_path).with_context(|| {
         format!(
@@ -48,115 +49,68 @@ pub fn decrypt_file(
     // Expose the secret key once. This key is used to initialize the cipher.
     let key_bytes = encryption_key.expose_secret();
 
-    let mut chunk_idx = 0; // To track which chunk we are processing
+    let mut nonce_len_buf = [0u8; 1];
+    encrypted_file
+        .read_exact(&mut nonce_len_buf)
+        .context("Failed to read nonce length")?;
+    let nonce_len = nonce_len_buf[0] as usize;
+    if nonce_len != 7 {
+        return Err(anyhow::anyhow!(
+            "Expected nonce length 7, got {}. File may be corrupted or format mismatch.",
+            nonce_len
+        ));
+    }
+
+    let mut nonce_bytes = [0u8; 7];
+    encrypted_file
+        .read_exact(&mut nonce_bytes)
+        .context("Failed to read initial nonce bytes")?;
+    let nonce = GenericArray::from_slice(&nonce_bytes);
+    eprintln!("[DEBUG] Nonce read: {:?}", nonce_bytes);
+
+    // === CONSTRUCT STREAM DECRYPTOR ONCE ===
+    let cipher = ChaCha20Poly1305::new(key_bytes.as_bytes().into());
+    let mut decryptor = DecryptorBE32::from_aead(cipher, nonce);
+
+    let mut chunk_idx = 0;
     let mut total_decrypted_bytes = 0u64;
 
-    // Loop to read and decrypt chunks until the end of the encrypted file is reached.
+    // === LOOP OVER ENCRYPTED BLOCKS ===
     loop {
         chunk_idx += 1;
-        eprintln!("[DEBUG] --- Processing chunk {} ---", chunk_idx);
-
-        // Buffer to read the 1-byte nonce length indicator.
-        let mut nonce_len_buf = [0u8; 1];
-        // Attempt to read the nonce length.
-        match encrypted_file.read_exact(&mut nonce_len_buf) {
-            Ok(_) => {
-                // Successfully read nonce length
+        let mut len_buf = [0u8; 4];
+        match encrypted_file.read_exact(&mut len_buf) {
+            Ok(_) => {}
+            Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => {
+                eprintln!("[DEBUG] Reached EOF cleanly at chunk {}.", chunk_idx);
+                break;
             }
             Err(e) => {
-                // If it's an EOF error, we've successfully processed the file.
-                // Otherwise, it's an unexpected I/O error.
-                if e.kind() == io::ErrorKind::UnexpectedEof {
-                    eprintln!(
-                        "[DEBUG] Reached end of encrypted file or incomplete chunk header for chunk {}. Stopping.",
-                        chunk_idx
-                    );
-                    break;
-                } else {
-                    return Err(e).context(format!("Failed to read nonce length for chunk {}. Possibly file corruption or I/O error.", chunk_idx));
-                }
+                return Err(e).context(format!(
+                    "Chunk {}: Failed to read encrypted length",
+                    chunk_idx
+                ));
             }
         }
-        let nonce_len = nonce_len_buf[0] as usize;
-        eprintln!(
-            "[DEBUG] Chunk {}: Nonce length read: {}",
-            chunk_idx, nonce_len
-        );
 
-        // Validate the nonce length. Your encryption code uses a fixed 7-byte nonce.
-        if nonce_len != 7 {
-            return Err(anyhow::anyhow!(
-                "Chunk {}: Invalid nonce length encountered: expected 7, got {}. File might be corrupted or not encrypted with this tool.",
-                chunk_idx,
-                nonce_len
-            ));
-        }
-
-        // Buffer to read the 7-byte nonce itself.
-        let mut nonce_bytes = [0u8; 7];
-        // Read the actual nonce bytes from the file.
+        let chunk_len = u32::from_be_bytes(len_buf) as usize;
+        let mut encrypted_chunk = vec![0u8; chunk_len];
         encrypted_file
-            .read_exact(&mut nonce_bytes)
-            .with_context(|| {
-                format!(
-                    "Chunk {}: Failed to read 7-byte nonce. File might be truncated or corrupted.",
-                    chunk_idx
-                )
-            })?;
-        // Convert the nonce bytes into a `GenericArray` which is required by the cipher.
-        let nonce = GenericArray::from_slice(&nonce_bytes);
-        eprintln!("[DEBUG] Chunk {}: Nonce read: {:?}", chunk_idx, nonce_bytes);
+            .read_exact(&mut encrypted_chunk)
+            .with_context(|| format!("Chunk {}: Failed to read encrypted chunk", chunk_idx))?;
 
-        // Buffer to read the 4-byte encrypted data length indicator.
-        let mut encrypted_len_buf = [0u8; 4];
-        // Read the encrypted data length (stored as big-endian bytes).
-        encrypted_file.read_exact(&mut encrypted_len_buf)
-            .with_context(|| format!("Chunk {}: Failed to read 4-byte encrypted data length. File might be truncated or corrupted.", chunk_idx))?;
-        // Convert the big-endian bytes back to a `u32`, then cast to `usize`.
-        let encrypted_len = u32::from_be_bytes(encrypted_len_buf) as usize;
-        eprintln!(
-            "[DEBUG] Chunk {}: Encrypted data length read: {} bytes",
-            chunk_idx, encrypted_len
-        );
-
-        // Create a vector to hold the encrypted chunk data.
-        let mut encrypted_chunk = vec![0u8; encrypted_len];
-        // Read the actual encrypted data into the buffer.
-        encrypted_file.read_exact(&mut encrypted_chunk)
-            .with_context(|| format!("Chunk {}: Failed to read {} bytes of encrypted data. File might be truncated or corrupted.", chunk_idx, encrypted_len))?;
-
-        // Initialize the `ChaCha20Poly1305` cipher with the encryption key.
-        let cipher = ChaCha20Poly1305::new(key_bytes.as_bytes().into());
-
-        // Create a streaming decryptor using the initialized cipher and the current nonce.
-        // IMPORTANT: As discussed, for each chunk, you are generating a new stream-cipher nonce.
-        // This means each chunk is treated as an independent stream for decryption.
-        let mut decryptor = DecryptorBE32::from_aead(cipher, nonce);
-
-        // Prepare a mutable buffer for in-place decryption.
-        let mut decrypted_chunk = encrypted_chunk.to_vec();
-        // Perform the decryption.
+        let mut decrypted_chunk = encrypted_chunk.clone();
         decryptor
             .decrypt_next_in_place(&[], &mut decrypted_chunk)
-            .map_err(|e| anyhow::anyhow!(
-                "Chunk {}: Decryption (authentication tag) error: {:?}. Key might be wrong or data corrupted.",
-                chunk_idx,
-                e
-            ))?;
+            .map_err(|e| anyhow::anyhow!("Chunk {}: Decryption failed: {:?}", chunk_idx, e))?;
 
-        // Write the resulting decrypted plaintext to the output file.
         decrypted_file
             .write_all(&decrypted_chunk)
-            .with_context(|| {
-                format!(
-                    "Chunk {}: Failed to write decrypted data to output file.",
-                    chunk_idx
-                )
-            })?;
+            .with_context(|| format!("Chunk {}: Failed to write decrypted chunk", chunk_idx))?;
 
         total_decrypted_bytes += decrypted_chunk.len() as u64;
         eprintln!(
-            "[DEBUG] Chunk {}: Successfully decrypted {} bytes. Total decrypted: {} bytes.",
+            "[DEBUG] Chunk {}: Decrypted {} bytes. Total: {}",
             chunk_idx,
             decrypted_chunk.len(),
             total_decrypted_bytes
